@@ -1,3 +1,15 @@
+Actions à faire par environnement 
+
+Infrastructure 
+
+Créer deux nouveau namespaces front et Back et les actions associés (plages IP ? )
+Créer d'un nouveau Certificats SSL pour l'API et  faire la Réservation DNS l'api : paymentGurantee.
+Déployer le certificat sur GCP 
+Ouvertures des flux Gateway / BackEnd GCP : demande à soumettre à l'équipe BAPI Gateway
+IAM pour le service account GKE (workload identity) afin d'accéder à BigTable
+XLD : création de l'infra
+Vérifier si besoin de revoir le sizing de cluster
+=========================================================================================
 <?xml version="1.0"?>
 <udm.DeploymentPackage version="{{BUILD_ID}}" application="SMP_IO7/IO7_TERRAFORM_ENTREPRISE">
 	<application/>
