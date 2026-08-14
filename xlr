@@ -1,3 +1,8 @@
+Error: Error creating RegionSslCertificate: googleapi: Error 400: The SSL certificate could not be parsed., sslCertificateCouldNotParseCert
+with module.CertificatePaymentGuarantee.google_compute_region_ssl_certificate.classic[0]
+on .terraform/modules/CertificatePaymentGuarantee/main.tf line 21, in resource "google_compute_region_ssl_certificate" "classic":
+resource "google_compute_region_ssl_certificate" "classic" {
+============================================================================
 # Exported from:        https://release-ins.mycloud.intranatixis.com:443/
 # Release version:      22.3.9
 # Date created:         Tue Jul 28 17:18:13 CEST 2026
