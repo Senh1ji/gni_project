@@ -543,3 +543,50 @@
 	<templates/>
 	<undeployDependencies>false</undeployDependencies>
 </udm.DeploymentPackage>
+
+===========================================================================================================
+
+terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.00"
+    }
+    google-beta = {
+      source  = "hashicorp/google-beta"
+      version = "~> 5.00"
+    }
+  }
+}
+
+provider "google" {
+  #version     = "~> 3.4"
+  region  = var.region
+  project = var.project_id
+}
+
+resource "google_project_iam_member" "iam-data-engineer" {
+  count   = length(var.iam_mapping)
+  project = var.project_id
+  role    = var.iam_mapping[count.index].role
+  member  = "group:${var.iam_mapping[count.index].group}"
+}
+
+resource "google_project_iam_member" "dba_admin_hpr" {
+  project = var.project_id
+  role    = "organizations/${var.organization_id}/roles/c_DBAAdmin_HPR"
+  member  = "group:${var.group_email}"
+}
+
+resource "google_project_iam_member" "dba_admin_prd" {
+  project = var.project_id
+  role    = "organizations/${var.organization_id}/roles/c_DBAAdmin_PRD"
+  member  = "group:${var.group_email}"
+}
+
+resource "google_project_iam_member" "dba_admin" {
+  project = var.project_id
+  role    = "organizations/${var.organization_id}/roles/c_DBAAdmin"
+  member  = "group:${var.group_email}"
+}
+
