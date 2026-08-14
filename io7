@@ -590,3 +590,103 @@ resource "google_project_iam_member" "dba_admin" {
   member  = "group:${var.group_email}"
 }
 
+==============================================================================================================
+module "rtg" {
+  source = "localterraform.com/google/rtg_gcp_ee/gcp"
+
+  namespace = {
+    ent_code  = lookup(var.tags, "ent", "")
+    bu_code   = lookup(var.tags, "bu", "")
+    env_code  = lookup(var.tags, "env", "")
+    iua_code  = lookup(var.tags, "iua", "")
+    type_code = lookup(var.tags, "type", "")
+  }
+  free_name   = var.free_name
+  description = var.description
+}
+
+resource "time_rotating" "rotation" {
+  count          = var.rotation == [] ? 0 : 1
+  rotation_hours = (var.rotation[0].rotation_time / 3600)
+}
+
+resource "google_secret_manager_secret" "secret" {
+  depends_on = [
+    google_kms_crypto_key_iam_member.key_sa_user,
+    google_pubsub_topic_iam_member.member
+  ]
+  secret_id = var.free_name
+
+  dynamic "rotation" {
+    for_each = var.rotation == [] ? [] : [1]
+    content {
+      rotation_period    = "${var.rotation[0].rotation_time}s"
+      next_rotation_time = time_rotating.rotation[0].rotation_rfc3339
+    }
+  }
+
+  dynamic "topics" {
+    for_each = var.rotation == [] ? [] : [1]
+    content {
+      name = "${data.google_project.project.id}/topics/${var.rotation[0].topic_name}"
+    }
+  }
+  replication {
+    user_managed {
+      replicas {
+        location = var.location
+        dynamic "customer_managed_encryption" {
+          for_each = var.kms_encryption
+          content {
+            kms_key_name = var.kms_encryption[0].cryptokey_id
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "google_project_service_identity" "sm_sa" {
+  provider = google-beta
+  project = data.google_project.project.project_id
+  service = "secretmanager.googleapis.com"
+}
+
+resource "google_kms_crypto_key_iam_member" "key_sa_user" {
+  count         = var.kms_encryption == [] ? 0 : 1
+  crypto_key_id = var.kms_encryption[0].cryptokey_id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member = "serviceAccount:${google_project_service_identity.sm_sa.email}"
+}
+
+resource "google_pubsub_topic_iam_member" "member" {
+  count  = var.rotation == [] ? 0 : 1
+  topic  = "${data.google_project.project.id}/topics/${var.rotation[0].topic_name}"
+  role   = "roles/pubsub.publisher"
+  member = "serviceAccount:${google_project_service_identity.sm_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "member" {
+  count     = length(var.secret_iam)
+  secret_id = google_secret_manager_secret.secret.secret_id
+  role      = var.secret_iam[count.index].role
+  member    = var.secret_iam[count.index].mail_identity
+}
+
+resource "google_secret_manager_secret_iam_member" "current_member" {
+  secret_id = google_secret_manager_secret.secret.secret_id
+  role      = "roles/secretmanager.admin"
+  member    = "serviceAccount:${data.google_client_openid_userinfo.provider_identity.email}"
+}
+
+resource "google_secret_manager_secret_version" "secret-version" {
+  depends_on = [
+    google_secret_manager_secret_iam_member.current_member
+  ]
+  count       = length(var.secret_version)
+  secret      = google_secret_manager_secret.secret.id
+  secret_data = var.secret_version[count.index].secret_data
+}
+
+
+
